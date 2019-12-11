@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+		    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+		    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+        <script src="https://d3js.org/topojson.v2.min.js"></script>
+
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<script type="text/javascript">
+		// 변수 설정
+            var myEntireData;
+            var myData_Lender;
+            var myData_Credit;
+            var myData_Pie;
+            var myData_Donut;
+            var myData_Line;
+            var margin_lender = {top: 10, right: 10, bottom: 30, left: 80};
+            var svgWidth_lender = 400 - margin_lender.left - margin_lender.right;
+            var svgHeight_lender = 180 - margin_lender.top - margin_lender.bottom;
+            var margin_credit = {top: 10, right: 10, bottom: 30, left: 80};
+            var svgWidth_credit = 420 - margin_credit.left - margin_credit.right;
+            var svgHeight_credit = 180 - margin_credit.top - margin_credit.bottom;
+            var margin_pie = {top: 10, right: 10, bottom: 30, left: 20};
+            var svgWidth_pie = 500 - margin_pie.left - margin_pie.right;
+            var svgHeight_pie = 200 - margin_pie.top - margin_pie.bottom;
+            var margin_donut = {top: 10, right: 10, bottom: 30, left: 100};
+            var svgWidth_donut = 300 - margin_donut.left - margin_donut.right;
+            var svgHeight_donut = 200 - margin_donut.top - margin_donut.bottom;
+            var margin_line = {top: 10, right: 10, bottom: 30, left: 30};
+            var svgWidth_line = 380 - margin_line.left - margin_line.right;
+            var svgHeight_line = 180 - margin_line.top - margin_line.bottom;
+            var radius = 110;
+		    var myChorData;
+		    var margin_chor = { top: 10, right: 10, bottom: 30, left: 100 };
+		    var ED_Data;
+		    var stateValue;
+		    var gWidth_chor = 500 - margin_chor.left - margin_chor.right;
+		    var gHeight_chor = 150 - margin_chor.top - margin_chor.bottom;
+			const colors = [
+			      '#E5E7E9'
+			      , '#D5DBDB'
+			      , '#CCD1D1'
+			      , '#E5E8E8'
+			      , '#D6DBDF'
+			      , '#AEB6BF'
+			      , '#85929E'
+			      , '#85929E'
+			      , '#5D6D7E'
+			      , '#34495E'
+			      , '#2E4053'
+			      , '#273746'
+			    ];
+
+			function loadData()
+            {
+              d3.csv("data.csv")
+                .then(function(data)
+              {
+                myEntireData = data;
+                // set dimensions for all svgs
+                d3.select("#LenderBarSVG")
+                            .attr("width", svgWidth_lender + margin_lender.left + margin_lender.right)
+                            .attr("height", svgHeight_lender + margin_lender.top + margin_lender.bottom)
+                            .append("g")
+                            .attr("id", "svg_lender_g_id")
+                            .attr("transform", "translate(" + margin_lender.left + "," + margin_lender.top + ")");
+				d3.select("#CreditScoreSVG")
+                            .attr("width", svgWidth_credit + margin_credit.left + margin_credit.right)
+                            .attr("height", svgHeight_credit + margin_credit.top + margin_credit.bottom)
+                            .append("g")
+                            .attr("id", "svg_CreditScore_g_id")
+                            .attr("transform", "translate(" + (margin_credit.left-10) + "," + (margin_credit.top) + ")");
+        d3.select("#PieChartSVG")
+                            .attr("width", svgWidth_pie + margin_pie.left + margin_pie.right)
+                            .attr("height", svgHeight_pie + margin_pie.top + margin_pie.bottom)
+                            .append("g")
+                            .attr("id", "svg_PieChart_g_id")
+                            .attr("transform", "translate(" + margin_pie.left + "," + margin_pie.top + ")");
+        d3.select("#DoNutSVG")
+                            .attr("width", svgWidth_donut + margin_donut.left + margin_donut.right)
+                            .attr("height", svgHeight_donut + margin_donut.top + margin_donut.bottom)
+                            .append("g")
+                            .attr("id", "svg_DoNut_g_id")
+                            .attr("transform", "translate(" + margin_donut.left + "," + margin_donut.top + ")");
+        d3.select("#MonthlyLineChartSVG")
+                            .attr("width", svgWidth_line + margin_line.left + margin_line.right)
+                            .attr("height", svgHeight_line + margin_line.top + margin_line.bottom)
+                            .append("g")
+                            .attr("id", "svg_LineGraph_g_id")
+                            .attr("transform", "translate(" + margin_line.left + "," + margin_line.top + ")");
+        d3.select("#ChoroplethSVG")
+                            .attr("width", gWidth_chor + margin_chor.left + margin_chor.right)
+                            .attr("height", gHeight_chor + margin_chor.top + margin_chor.bottom)
+                            .append("g")
+                            .attr("id", "svg_Choropleth")
+                            .attr("transform", "translate(" + margin_chor.left + "," + margin_chor.top + ")");
+                generateLenderBar(null,"Status");
+                createLenderBarChart();
+                generateCreditBar(null,"Status");
+                createCreditBar();
+                generatePieChart(null,"Status");
+                createPieChart();
+                generateDoNut(null,"Status");
+                createDoNut();
+                generateLineGraph(null,"Status");
+                createLineGraph();
+	            generateChorData(null, "Status");
+	          ED_Data = d3.nest().key(function (d) {
+	            return d.State;
+	          }).rollup(function (d) {
+	            return d3.min(d, function (g) { return g.State_Code; });
+	          }).entries(myEntireData);
+	          //console.log("ED_Data: "+ED_Data);
+	          showMap(myChorData)
+              });
+            }
+
+			function generateLenderBar(myCommodity,filterType)
+            {
+              if (myCommodity == "1" && filterType == "Status")
+              {
+                myData_Lender = d3.nest()
+								.key(function(d){
+									return d.LenderId;})
+								.sortKeys(d3.ascending)
+								.key(function(v){
+								return v.Status==1;})
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData);
+				for(var i=0;i<myData_Lender.length;i++){
+					myData_Lender[i].value = myData_Lender[i].values[0].value;
+
+				if(myData_Lender[i].values.length > 1){
+					if(myData_Lender[i].values[0].key == "true"){
+					myData_Lender[i].value = myData_Lender[i].values[0].value;
+					}
+					else if(myData_Lender[i].values[1].key == "true"){
+					myData_Lender[i].value = myData_Lender[i].values[1].value;
+					}
+					else{
+					myData_Lender[i].value = 0;
+					}
+				}
+				else{
+					if(myData_Lender[i].values[0].key == "true"){
+					myData_Lender[i].value = myData_Lender[i].values[0].value;
+					}
+					else{
+					myData_Lender[i].value = 0;
+					}
+				}
+				}
+
+              } else if(myCommodity == "2" && filterType == "Status"){
+				myData_Lender = d3.nest()
+								.key(function(d){
+									return d.LenderId;})
+								.sortKeys(d3.ascending)
+								.key(function(v){
+								return v.Status==2;})
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData);
+				for(var i=0;i<myData_Lender.length;i++){
+					myData_Lender[i].value = myData_Lender[i].values[0].value;
+				}
+			  } else
+              {
+                myData_Lender = d3.nest()
+								.key(function(d){
+									return d.LenderId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+
+				}
+              // datum = { key : LenderId, value : count }
+			  };
+			  function generateCreditBar(myCommodity,filterType)
+            { if(filterType == "Status"){
+              if (myCommodity == "1")
+              {
+                myData_Credit = d3.nest()
+								.key(function(d){
+									return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.key(function(v){
+								return v.Status==1;})
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData);
+
+				for(var i=0;i<myData_Credit.length;i++){
+					if(myData_Credit[i].values.length > 1){
+					if(myData_Credit[i].values[0].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[0].value;
+					}
+					else if(myData_Credit[i].values[1].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[1].value;
+					}
+					else{
+					myData_Credit[i].value = 0;
+					}
+				}
+				else{
+					if(myData_Credit[i].values[0].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[0].value;
+					}
+					else{
+					myData_Credit[i].value = 0;
+					}
+
+				}
+				}
+
+              } else if(myCommodity == "2" && filterType == "Status"){
+				myData_Credit =	d3.nest()
+								.key(function(d){
+									return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.key(function(v){
+								return v.Status==2;})
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				for(var i=0;i<myData_Credit.length;i++){
+				 if(myData_Credit[i].values.length > 1){
+					if(myData_Credit[i].values[0].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[0].value;
+					}
+					else if(myData_Credit[i].values[1].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[1].value;
+					}
+					else{
+					myData_Credit[i].value = 0;
+					}
+				}
+				else{
+					if(myData_Credit[i].values[0].key == "true"){
+					myData_Credit[i].value = myData_Credit[i].values[0].value;
+					}
+					else{
+					myData_Credit[i].value = 0;
+					}
+				}
+				}
+			  }
+			  else
+              {
+                myData_Credit = d3.nest()
+								.key(function(d){
+									return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				}
+              // datum = { key : EstimatedCreditScore, value : count }
+			  }
+			  else if(filterType == "Lender"){
+					debugger;
+					var lStatus = $("#StatusDD").val();
+
+					if(lStatus == ""){
+					{
+                myData_Credit = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity)) return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewCreditArr = [];
+				for(var i=0;i<myData_Credit.length-1;i++){
+					if(myData_Credit.length > 4){
+						NewCreditArr.push(myData_Credit[i]);
+					}
+				}
+				myData_Credit = NewCreditArr;
+
+				}
+				}
+				else if(lStatus == "1"){
+					{
+                myData_Credit = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status === "1") ) return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewCreditArr = [];
+				for(var i=0;i<myData_Credit.length-1;i++){
+					if(myData_Credit.length > 4){
+						NewCreditArr.push(myData_Credit[i]);
+					}
+				}
+				myData_Credit = NewCreditArr;
+				}
+				}
+				else if(lStatus == "2"){
+					{
+                myData_Credit = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status === "2") ) return d.EstimatedCreditScore;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewCreditArr = [];
+				for(var i=0;i<myData_Credit.length-1;i++){
+					if(myData_Credit.length > 4){
+						NewCreditArr.push(myData_Credit[i]);
+					}
+				}
+				myData_Credit = NewCreditArr;
+					}
+				}
+			  }
+		}
+         function generatePieChart(myCommodity,filterType){
+			if(filterType == "Status"){
+					 if(myCommodity == "1"){
+						myData_Pie = d3.nest()
+							  .key(function (d) {return d.PropertyTypeId;})
+							  .key(function(v){return v.Status==1;})
+							  .rollup(function(d){return d.length;})
+							  .entries(myEntireData)
+						for(var i=0;i<myData_Pie.length;i++){
+								if(myData_Pie[i].values.length > 1){
+								if(myData_Pie[i].values[0].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[0].value;
+								}
+								else if(myData_Pie[i].values[1].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[1].value;
+								}
+								else{
+								myData_Pie[i].value = 0;
+								}
+							}
+							else{
+								if(myData_Pie[i].values[0].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[0].value;
+								}
+								else{
+								myData_Pie[i].value = 0;
+								}
+							}
+							}
+					 }else if(myCommodity == "2" && filterType == "Status"){
+						myData_Pie = d3.nest()
+							  .key(function (d) {return d.PropertyTypeId;})
+							  .key(function(v){return v.Status==2;})
+							  .rollup(function(d){return d.length;})
+							  .entries(myEntireData)
+						for(var i=0;i<myData_Pie.length;i++){
+								if(myData_Pie[i].values.length > 1){
+								if(myData_Pie[i].values[0].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[0].value;
+								}
+								else if(myData_Pie[i].values[1].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[1].value;
+								}
+								else{
+								myData_Pie[i].value = 0;
+								}
+							}
+							else{
+								if(myData_Pie[i].values[0].key == "true"){
+								myData_Pie[i].value = myData_Pie[i].values[0].value;
+								}
+								else{
+								myData_Pie[i].value = 0;
+								}
+
+							}
+							}
+					 }else{
+					  myData_Pie = d3.nest()
+					  .key(function (d) {
+						return d.PropertyTypeId;
+					  })
+					  .rollup(function (d) {
+						return d.length;
+					  })
+					  .entries(myEntireData);
+						}
+			} else if(filterType == "Lender"){
+				debugger;
+					var lStatus = $("#StatusDD").val();
+					if(lStatus == ""){
+					{
+                myData_Pie = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity)) return d.PropertyTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewPieArr = [];
+				for(var i=0;i<myData_Pie.length;i++){
+					if(myData_Pie[i].key != "undefined"){
+						NewPieArr.push(myData_Pie[i]);
+					}
+				}
+				myData_Pie = NewPieArr;
+				}
+				}else if(lStatus == "1"){
+					{
+                myData_Pie = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status == "1")) return d.PropertyTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewPieArr = [];
+				for(var i=0;i<myData_Pie.length;i++){
+					if(myData_Pie[i].key != "undefined"){
+						NewPieArr.push(myData_Pie[i]);
+					}
+				}
+				myData_Pie = NewPieArr;
+				}
+
+				} else if(lStatus == "2"){
+					{
+                myData_Pie = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status == "2")) return d.PropertyTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewPieArr = [];
+				for(var i=0;i<myData_Pie.length;i++){
+					if(myData_Pie[i].key != "undefined"){
+						NewPieArr.push(myData_Pie[i]);
+					}
+				}
+				myData_Pie = NewPieArr;
+				}
+
+				}
+
+			}
+		}
+		 function generateDoNut(myCommodity,filterType){
+		 debugger;
+		 if(filterType == "Status"){
+			if(myCommodity == "1"){
+				myData_Donut = d3.nest()
+					  .key(function (d) {return d.RequestedLoanTypeId;})
+					  .key(function(v){return v.Status==1;})
+					  .rollup(function(d){return d.length;})
+					  .entries(myEntireData)
+				for(var i=0;i<myData_Donut.length;i++){
+						myData_Donut[i].value = myData_Donut[i].values[0].value;
+					}
+			}else if(myCommodity == "2"){
+				myData_Donut = d3.nest()
+					  .key(function (d) {return d.RequestedLoanTypeId;})
+					  .key(function(v){return v.Status==2;})
+					  .rollup(function(d){return d.length;})
+					  .entries(myEntireData)
+				for(var i=0;i<myData_Donut.length;i++){
+						myData_Donut[i].value = myData_Donut[i].values[0].value;
+					}
+			 }else{
+			  myData_Donut = d3.nest()
+			  .key(function (d) {
+				return d.RequestedLoanTypeId;
+			  })
+			  .rollup(function (d) {
+				return d.length;
+			  })
+			  .entries(myEntireData);
+				}
+		}else if(filterType == "Lender"){
+			var lStatus = $("#StatusDD").val();
+			if (lStatus == "1")
+			{
+                myData_Donut = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status == "1")) return d.RequestedLoanTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewDonutArr = [];
+				for(var i=0;i<myData_Donut.length;i++){
+					if(myData_Donut[i].key != "undefined"){
+						NewDonutArr.push(myData_Donut[i]);
+					}
+				}
+				myData_Donut = NewDonutArr;
+			}else if(lStatus == "2"){
+				myData_Donut = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity && d.Status == "2")) return d.RequestedLoanTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewDonutArr = [];
+				for(var i=0;i<myData_Donut.length;i++){
+					if(myData_Donut[i].key != "undefined"){
+						NewDonutArr.push(myData_Donut[i]);
+					}
+				}
+				myData_Donut = NewDonutArr;
+
+			}else{
+				myData_Donut = d3.nest()
+								.key(function(d){if (( d.LenderId === myCommodity)) return d.RequestedLoanTypeId;})
+								.sortKeys(d3.ascending)
+								.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewDonutArr = [];
+				for(var i=0;i<myData_Donut.length;i++){
+					if(myData_Donut[i].key != "undefined"){
+						NewDonutArr.push(myData_Donut[i]);
+					}
+				}
+				myData_Donut = NewDonutArr;
+
+			}
+		}
+	}
+
+function parseData(data) {
+        var monthNames={
+       "Jan":1,
+       "Feb":2,
+       "Mar":3,
+       "Apr":4,
+       "May":5,
+       "Jun":6,
+       "Jul":7,
+       "Aug":8,
+       "Sep":9
+     };
+			  var arr =[];
+			  for (var i=0 ;i<data.length;i++){
+				arr.push(
+				  {date: new Date("0000-" +monthNames[data[i].key]+ "-01"),
+				  value : +data[i].value
+				  }
+				);
+			  }
+			  return arr;
+   }
+function sortData(data)
+   {
+     var monthNames={
+       "Jan":1,
+       "Feb":2,
+       "Mar":3,
+       "Apr":4,
+       "May":5,
+       "Jun":6,
+       "Jul":7,
+       "Aug":8,
+       "Sep":9
+     };
+     data.sort(function(a,b){
+       var x=monthNames[a.key]-monthNames[b.key];
+       return x;
+       console.log(data);
+     });
+   }
+        function generateLineGraph(myCommodity,filterType){
+		debugger;
+		if(filterType == "Status"){
+			if(myCommodity == "1"){
+				myData_Line = d3.nest()
+			   .key(function(d) {
+				var date=d.UpdatedOn;
+					month=date.substring(0,date.indexOf(" "));
+					return month;})
+				.key(function(v){return v.Status==1;})
+				.rollup(function(d) {return d.length;})
+				.entries(myEntireData)
+
+				for(var i=0;i<myData_Line.length;i++){
+					if(myData_Line[i].values.length > 1){
+						if(myData_Line[i].values[0].key == "true"){
+						myData_Line[i].value = myData_Line[i].values[0].value;
+						}
+						else if(myData_Line[i].values[1].key == "true"){
+						myData_Line[i].value = myData_Line[i].values[1].value;
+						}
+						else{
+						myData_Line[i].value = 0;
+						}
+					}
+					else{
+						if(myData_Line[i].values[0].key == "true"){
+						myData_Line[i].value = myData_Line[i].values[0].value;
+						}
+						else{
+						myData_Line[i].value = 0;
+						}
+					}
+				}
+				var sortedData=sortData(myData_Line);
+				myData_Line =parseData(myData_Line);
+
+		}else if(myCommodity == "2"){
+			myData_Line = d3.nest()
+           .key(function(d) {
+            var date=d.UpdatedOn;
+				month=date.substring(0,date.indexOf(" "));
+				return month;})
+			.key(function(v){return v.Status==2;})
+            .rollup(function(d) {return d.length;})
+            .entries(myEntireData)
+
+			for(var i=0;i<myData_Line.length;i++){
+				if(myData_Line[i].values.length > 1){
+					if(myData_Line[i].values[0].key == "true"){
+					myData_Line[i].value = myData_Line[i].values[0].value;
+					}
+					else if(myData_Line[i].values[1].key == "true"){
+					myData_Line[i].value = myData_Line[i].values[1].value;
+					}
+					else{
+					myData_Line[i].value = 0;
+					}
+				}
+				else{
+					if(myData_Line[i].values[0].key == "true"){
+					myData_Line[i].value = myData_Line[i].values[0].value;
+					}
+					else{
+					myData_Line[i].value = 0;
+					}
+
+				}
+		}
+			var sortedData=sortData(myData_Line);
+            myData_Line =parseData(myData_Line);
+		}else{
+          myData_Line = d3.nest()
+           .key(function(d) {
+            var date=d.UpdatedOn;
+           month=date.substring(0,date.indexOf(" "));
+            return month;})
+                      .rollup(function(d) {
+              return d.length;
+                      })
+                      .entries(myEntireData)
+
+            var sortedData=sortData(myData_Line);
+            myData_Line =parseData(myData_Line);
+        }
+	} else if(filterType == "Lender"){
+		var lStatus = $("#StatusDD").val();
+		if(lStatus == ""){
+		myData_Line = d3.nest()
+						   .key(function(d){if ( d.LenderId === myCommodity){
+										var date=d.UpdatedOn;
+										month=date.substring(0,date.indexOf(" "));
+										return month;}})
+							.sortKeys(d3.ascending)
+							.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewLineArr = [];
+				for(var i=0;i<myData_Line.length;i++){
+					if(myData_Line[i].key != "undefined"){
+						NewLineArr.push(myData_Line[i]);
+					}
+				}
+				myData_Line = NewLineArr;
+            var sortedData=sortData(myData_Line);
+            myData_Line =parseData(myData_Line);
+		}
+		else if(lStatus == "1"){
+			myData_Line = d3.nest()
+						   .key(function(d){if (( d.LenderId === myCommodity && d.Status === lStatus)){
+										var date=d.UpdatedOn;
+										month=date.substring(0,date.indexOf(" "));
+										return month;}})
+							.sortKeys(d3.ascending)
+							.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewLineArr = [];
+				for(var i=0;i<myData_Line.length;i++){
+					if(myData_Line[i].key != "undefined"){
+						NewLineArr.push(myData_Line[i]);
+					}
+				}
+				myData_Line = NewLineArr;
+			var sortedData=sortData(myData_Line);
+            myData_Line =parseData(myData_Line);
+		}
+		else if(lStatus == "2"){
+			myData_Line = d3.nest()
+						   .key(function(d){if (( d.LenderId === myCommodity && d.Status === lStatus)){
+										var date=d.UpdatedOn;
+										month=date.substring(0,date.indexOf(" "));
+										return month;}})
+							.sortKeys(d3.ascending)
+							.rollup(function(d){
+								return d.length;})
+								.entries(myEntireData)
+				var NewLineArr = [];
+				for(var i=0;i<myData_Line.length;i++){
+					if(myData_Line[i].key != "undefined"){
+						NewLineArr.push(myData_Line[i]);
+					}
+				}
+				myData_Line = NewLineArr;
+			var sortedData=sortData(myData_Line);
+            myData_Line =parseData(myData_Line);
+		}
+
+	}
+	}
+		function createLenderBarChart() {
+			  $("#svg_lender_g_id").html("");
+              var svg = d3.select("#svg_lender_g_id");
+              // generate scales
+              var xScale = d3.scaleBand()
+                                    .domain(myData_Lender.map( function(d)
+                                      { return d.key;
+                                      }))
+                                    .range([0, svgWidth_lender])
+                                    .paddingInner(0.05);
+              var yScale = d3.scaleLinear()
+                                    .domain([0, d3.max(myData_Lender, function(d) { return d.value; })])
+                                    .range([svgHeight_lender, 0]);
+              // generate axis
+              svg.append("g")
+                  .attr("transform", "translate(0," + (svgHeight_lender) + ")")
+                  .call(d3.axisBottom(xScale));
+              svg.append("g")
+                  // .attr("transform", "translate(" + 100 + ",0)")
+                  .call(d3.axisLeft(yScale));
+              svg.append("g")
+                   .call(d3.axisLeft(yScale))
+                   .append("text")
+                   .attr("fill", "#000")
+                   .attr("transform", "rotate(-90)")
+                   .attr("y", 6)
+                   .attr("dy", "-5em")
+                   .attr("dx", "-6em")
+                   .attr("text-anchor", "end")
+                   .text("Total");
+              svg.append("text")
+				  .attr("transform", "translate(" + (svgWidth_lender/2) + " ," + (svgHeight_lender + margin_lender.top +10 ) + ")")
+				  .style("text-anchor", "middle")
+                  .text("")
+                  .attr("dy", "1em")
+
+              // generate bars
+              svg.selectAll("rect_bar")
+                  .data(myData_Lender)
+                  .enter()
+                  .append("rect")
+                  .attr("x", function(d, i)
+                    {
+                      // console.log( i + " " + xScale(d.key) );
+                      return xScale(d.key);
+                    })
+                  .attr("y", function(d, i)
+                    {
+                      return yScale(d.value);
+                    })
+                  .attr("height", function(d, i)
+                    {
+                      return svgHeight_lender-yScale(d.value);
+                    })
+                  .attr("width", function(d, i)
+                    {
+                      return xScale.bandwidth();
+                    })
+                  .attr("class", "myrectlender")
+                  .on("mouseover", function(d) {
+					generateCreditBar(d.key,"Lender");
+					createCreditBar();
+					generatePieChart(d.key,"Lender");
+					createPieChart();
+					generateDoNut(d.key,"Lender");
+					createDoNut();
+					generateLineGraph(d.key,"Lender");
+					createLineGraph();
+                  })
+                  .on("mouseout", function(d) {
+					var lStatus = $("#StatusDD").val();
+                    generateCreditBar(lStatus,"Status");
+					createCreditBar();
+					generatePieChart(lStatus,"Status");
+					createPieChart();
+					generateDoNut(lStatus,"Status");
+					createDoNut();
+					generateLineGraph(lStatus,"Status");
+					createLineGraph();
+                  });
+            }
+
+
+			function createCreditBar() {
+			  $("#svg_CreditScore_g_id").html("");
+              var svg = d3.select("#svg_CreditScore_g_id");
+              // generate scales
+              var xScale = d3.scaleBand()
+                                    .domain(myData_Credit.map( function(d)
+                                      { return d.key;
+                                      }))
+                                    .range([0, svgWidth_credit])
+                                    .paddingInner(0.05);
+              var yScale = d3.scaleLinear()
+                                    .domain([0, d3.max(myData_Credit, function(d) { return d.value; })])
+                                    .range([svgHeight_lender, 0]);
+              // generate axis
+              svg.append("g")
+                  .attr("transform", "translate(0," + (svgHeight_credit) + ")")
+                  .call(d3.axisBottom(xScale));
+			  svg.append("text")
+				  .attr("transform", "translate(" + (svgWidth_credit/2) + " ," + (svgHeight_credit + margin_credit.top +10 ) + ")")
+				  .style("text-anchor", "middle")
+                  .text("")
+              svg.append("g")
+                  // .attr("transform", "translate(" + 100 + ",0)")
+                  .call(d3.axisLeft(yScale));
+              svg.append("g")
+                   .call(d3.axisLeft(yScale))
+                   .append("text")
+                   .attr("fill", "#000")
+                   .attr("transform", "rotate(-90)")
+                   .attr("y", 6)
+                   .attr("dy", "-5em")
+                   .attr("dx", "-6em")
+                   .attr("text-anchor", "end")
+                   .text("Total");
+
+              // generate bars
+              svg.selectAll("rect_bar")
+                  .data(myData_Credit)
+                  .enter()
+                  .append("rect")
+                  .attr("x", function(d, i)
+                    {
+                      // console.log( i + " " + xScale(d.key) );
+                      return xScale(d.key);
+                    })
+                  .attr("y", function(d, i)
+                    {
+                      return yScale(d.value);
+                    })
+                  .attr("height", function(d, i)
+                    {
+                      return svgHeight_credit-yScale(d.value);
+                    })
+                  .attr("width", function(d, i)
+                    {
+                      return xScale.bandwidth();
+                    })
+                  .attr("class", "myrectcredit")
+                  .on("mouseover", function(d) {
+                    /*generateDataTree(d.key);
+                    removeTreeMap();
+                    createTreeMap(); */
+                  })
+                  .on("mouseout", function(d) {
+                    /*generateDataTree(null);
+                    removeTreeMap();
+                    createTreeMap();
+					*/
+                  });
+            }
+            function createPieChart(){
+				$("#svg_PieChart_g_id").html("");
+              var svg = d3.select("#svg_PieChart_g_id");
+              var g = svg.append("g")
+                   .attr("transform", "translate(" + (svgWidth_pie+20)*2/3 + "," + svgHeight_pie *3/ 4 + ")");
+              var color = d3.scaleOrdinal(['#9900e6','#b3b300','#ff7f00','#258e25','#cc0066']);
+              var legendRectSize = 25; // defines the size of the colored squares in legend
+              var legendSpacing = 6;
+			  var dataMappingforPropertyType ={1:"Single Family Home",2:"Townhome",3:"Condominium",5:"Multi Family Home",6:"Mobile/Manufacture"};
+        var pie = d3.pie().value(function(d) {
+                return (d.value/myEntireData.length)*100;
+                //return d.value/d.my
+            });
+         var slices = pie(myData_Pie);
+        var path = d3.arc()
+                     .outerRadius(radius - 10)
+                     .innerRadius(0);
+        var label = d3.arc()
+                      .outerRadius(radius)
+                      .innerRadius(radius - 80);
+        var arc = g.selectAll(".arc")
+                       .data(pie(myData_Pie))
+                       .enter().append("g")
+                       .attr("class", "arc");
+            arc.append("path")
+               .attr("d", path)
+               .attr("fill", function(d) { return color(d.data.key); });
+
+            console.log(arc)
+
+            arc.append("text")
+               .attr("transform", function(d) {
+                        return "translate(" + label.centroid(d) + ")";
+                })
+               .text(function(d) { return d.data.key; });
+
+            svg.append('g').attr("transform", "translate(" + svgWidth_pie / 60 + "," + (svgHeight_pie-20) / 2 + ")")
+               .attr('class', 'legend legendPie')
+               .selectAll('text')
+               .data(slices)
+               .enter()
+               .append('text')
+               .text(function(d) { return d.data.key + ' '+d.data.value; })
+               .attr('fill', function(d) { return color(d.data.key); })
+               .attr('y', function(d, i) { return 20 * (i + 1); })
+	}
+            function createDoNut(){
+				$("#svg_DoNut_g_id").html("");
+              var svg = d3.select("#svg_DoNut_g_id");
+              var g = svg.append("g").attr("transform", "translate(" + (svgWidth_donut*4) / 3 + "," + (svgHeight_donut * 3)/4 + ")");
+              var color = d3.scaleOrdinal(['#ff8080','#8080ff ','#ff7f00','#258e25','#cc0066']);
+              var legendRectSize = 25; // defines the size of the colored squares in legend
+              var legendSpacing = 6;
+			  var dataMappingforProperty ={1:"Purchase",2:"ReFinance"};
+        var pie = d3.pie().value(function(d) {
+                return (d.value/myEntireData.length)*100;
+                //return d.value/d.my
+            });
+         var slices = pie(myData_Donut);
+        var path = d3.arc()
+                     .outerRadius(radius - 10)
+                     .innerRadius(50);
+        var label = d3.arc()
+                      .outerRadius(radius)
+                      .innerRadius(radius - 80);
+        var arc = g.selectAll(".arc")
+                       .data(pie(myData_Donut))
+                       .enter().append("g")
+                       .attr("class", "arc");
+            arc.append("path")
+               .attr("d", path)
+               .attr("fill", function(d) { return color(d.data.key); });
+
+            console.log(arc)
+
+            arc.append("text")
+               .attr("transform", function(d) {
+                        return "translate(" + label.centroid(d) + ")";
+                })
+               .text(function(d) { return d.data.key; });
+            svg.append("g")
+               .attr("transform", "translate(" + (svgWidth_donut + 10) + " ," + (svgHeight_donut + margin_donut.top)*4/3 + ")")
+               .append("text")
+               .attr("class", "title");
+            svg.append('g')
+               .attr('class', 'legend legendDonut')
+               .attr("transform", "translate(" + (svgWidth_donut + 10)/20 + " ," + (svgHeight_donut + margin_donut.top - 1000)/10 + ")")
+               .selectAll('text')
+               .data(slices)
+               .enter()
+               .append('text')
+               .text(function(d) { return ; })
+               .attr('fill', function(d) { return color(d.data.key); })
+               .attr('y', function(d, i) { return 20 * (i + 1); })
+	}
+           function createLineGraph(){
+			$("#svg_LineGraph_g_id").html("");
+            var svg = d3.select("#svg_LineGraph_g_id");
+			var g = svg.append("g")
+					.attr("transform",
+			  "translate(" + margin_line.left + "," + margin_line.top + ")");
+			var x = d3.scaleTime().rangeRound([0, svgWidth_line-10]);
+			var y = d3.scaleLinear().rangeRound([svgHeight_line, 0]);
+			var line = d3.line()
+		   .x(function(d) { return x(d.date)})
+		   .y(function(d) { return y(d.value)})
+		   x.domain(d3.extent(myData_Line, function(d) { return d.date }));
+		   y.domain(d3.extent(myData_Line, function(d) { return d.value }));
+		   g.append("g")
+		   .attr("transform", "translate(0," + svgHeight_line + ")")
+		   .call(d3.axisBottom(x))
+		   .select(".domain");
+
+
+		   g.append("g")
+		   .call(d3.axisLeft(y))
+		   .append("text")
+		   .attr("fill", "#000")
+		   .attr("transform", "rotate(-90)")
+		   .attr("y", 6)
+		   .attr("dy", "-5em")
+		   .attr("dx", "-6em")
+		   .attr("text-anchor", "end")
+		   .text("Total");
+		   g.append("path")
+		.datum(myData_Line)
+		.attr("fill", "none")
+		.attr("stroke", "steelblue")
+		.attr("stroke-linejoin", "round")
+		.attr("stroke-linecap", "round")
+		.attr("stroke-width", 1.5)
+		.attr("d", line);
+            }
+
+		function statusChange (){
+			var selectedVal = $("#StatusDD").val();
+			generateLenderBar(selectedVal,"Status");
+            createLenderBarChart();
+            generateCreditBar(selectedVal,"Status");
+            createCreditBar();
+            generatePieChart(selectedVal,"Status");
+			createPieChart();
+			generateLineGraph(selectedVal,"Status");
+			createLineGraph();
+			generateDoNut(selectedVal,"Status");
+            createDoNut();
+			generateChorData(selectedVal, "Status");
+			showMap();
+
+		}
+		    function generateChorData(myCommodity, Filtertype) {
+			debugger;
+      if(myCommodity == "1" && Filtertype == "Status"){
+					myChorData = d3.nest()
+					.key(function (d) { return d.State_Code;})
+					.sortKeys(d3.descending)
+					.key(function(v){return v.Status==1;})
+					.rollup(function (d) {
+					  return d.length;
+					}).entries(myEntireData);
+				for(var i=0;i<myChorData.length;i++){
+				if(myChorData[i].values.length > 1){
+					if(myChorData[i].values[0].key == "true"){
+					myChorData[i].value = myChorData[i].values[0].value;
+					}
+					else if(myChorData[i].values[1].key == "true"){
+					myChorData[i].value = myChorData[i].values[1].value;
+					}
+					else{
+					myChorData[i].value = 0;
+					}
+				}
+				else{
+					if(myChorData[i].values[0].key == "true"){
+					myChorData[i].value = myChorData[i].values[0].value;
+					}
+					else{
+					myChorData[i].value = 0;
+					}
+
+				}
+			}
+
+
+			}else if(myCommodity == "2" && Filtertype == "Status"){
+				  myChorData = d3.nest()
+					.key(function (d) { return d.State_Code; })
+					.sortKeys(d3.descending)
+					.key(function(v){return v.Status==2;})
+					.rollup(function (d) {
+					  return d.length;
+					}).entries(myEntireData);
+				for(var i=0;i<myChorData.length;i++){
+				if(myChorData[i].values.length > 1){
+					if(myChorData[i].values[0].key == "true"){
+					myChorData[i].value = myChorData[i].values[0].value;
+					}
+					else if(myChorData[i].values[1].key == "true"){
+					myChorData[i].value = myChorData[i].values[1].value;
+					}
+					else{
+					myChorData[i].value = 0;
+					}
+				}
+				else{
+					if(myChorData[i].values[0].key == "true"){
+					myChorData[i].value = myChorData[i].values[0].value;
+					}
+					else{
+					myChorData[i].value = 0;
+					}
+
+					}
+				}
+			}
+			else{
+				myChorData = d3.nest()
+					.key(function (d) { return d.State_Code; })
+					.sortKeys(d3.descending)
+					.rollup(function (d) {
+					  return d.length;
+					}).entries(myEntireData);
+			}
+      myChorData.filter(function(d,i) {
+        return null})
+    }
+    function showMap() {
+
+		$("#svg_Choropleth").html("");
+      var svg = d3.select("#svg_Choropleth")
+
+      var losses = d3.map();
+      myChorData.map(function (d, i) {
+        if (d.key > 10) {
+          losses.set(d.key, d.value);
+        } else {
+          losses.set(("0" + d.key).slice(-2), d.value);
+        }
+      })
+      var path = d3.geoPath();
+      var x = d3.scaleLinear()
+        .domain([11, 20])
+        .rangeRound([500, 860]);
+      var color = d3.scaleThreshold()
+        .domain(d3.range(1, 12))
+        .range(colors);
+      var promises = [d3.json("https://raw.githubusercontent.com/abankar1/CustomerBorrowerBehaviour/master/D3.json")]
+      Promise.all(promises).then(ready)
+      function ready([us]) {
+        svg.append("path")
+          .attr('stroke', "#000")
+          .attr("stroke-width", 1)
+          .attr("class", "country-border")
+          .attr("d", path(topojson.feature(kr, kr.objects.nation)));
+        svg.append("path")
+          .datum(topojson.mesh(us, us.objects.states, function (a, b) { return a !== b; }))
+          .attr("class", "state-border")
+          .attr("d", path);
+        var state_g = svg.append("g")
+        state_g.selectAll("path")
+          .data(topojson.feature(us, us.objects.states).features)
+          .enter().append("path")
+          .attr("class", "state")
+          .attr("fill", function (d) { return color((d.amount = losses.get(d.id)) / 10); })
+          .attr("d", path)
+          .append("title")
+          .text(function (d) {
+            var j = 0;
+            console.log(ED_Data);
+            for (j = 0; j < ED_Data.length; j++) {
+              if (ED_Data[j].value == d.id) {
+                stateValue = ED_Data[j].key;
+                break;
+              }
+            }
+            return stateValue + "\n" + d.amount;
+          });
+      }
+    }
+			window.onload = loadData;
+    </script>
+  </head>
+  <body>
+  <header>
+<div class="row"><div class="logoContainer"><svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 452.8 165.4" class="logo"><style>.st0{fill:#FFF}</style><g id="LendingTree_Logo_8_"><g id="LendingTree_8_"><g id="Registered_Trademark_16_"></linearGradient></g></g></svg></div><div class="headerContainer"><h2 class="">Traffic Accident Data in Korea</h2></div></div>
+  </header>
+  <div>
+  <div class="ddlabel" >
+    <p>Data Visualization (D3.js)</p></div>
+  <div class="statusDD" >
+  <select id="StatusDD" onchange="statusChange()" style="margin: 10px;">
+  <option value="" selected="">All</option>
+    </select></div></div>
+    <div>
+    </div>
+    <br />
+    <br />
+    <br />
+
+    <div class="chartContainer">
+<div>
+
+  <div  class="row1"><div id="LenderBar" align="center" class="chartTitle">Year</div><svg id="LenderBarSVG"></svg></div>
+  <div class="row1"><div id="DoNut" align="center" class="chartTitle">City</div><svg class = "donutsvg" id="DoNutSVG"></svg></div>
+<div class="row1"><div id="PieChart" align="center"class="chartTitle">Accident type</div><svg id="PieChartSVG" class="piechartsvg"></svg></div>
+
+  </div>
+  <div>
+        <div  class="row2"><div id="CreditScoreBar" align="center" class="chartTitle">Accident in the same place</div><svg id="CreditScoreSVG" class="CreditScoreSVG"></svg></div>
+        <div class="row2"><div id="MonthlyLineChart" align="center" class="chartTitle">Month</div><svg id="MonthlyLineChartSVG"></svg></div>
+        <div class="row2 mapRow"><div id="Choropleth" align="center" class="chartTitle"></div><div class="mapContainer"><svg id="ChoroplethSVG" class="mapSVG"></svg></div></div>
+
+
+</div>
+
+(2012-2018)
+
+<br />
+<hr />
+<br />
+
+
+
+
+<div class="chartContainer">
+  <div  class="row1"><div id="LenderBar" align="center" class="chartTitle">Number of traffic accidents in Korea
+    <div id="regions_div" style="width: 300px; height: 170px;"></div>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+     google.charts.load('current', {
+       'packages':['geochart'],
+       'mapsApiKey': 'AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY'
+     });
+     google.charts.setOnLoadCallback(drawRegionsMap);
+     function drawRegionsMap() {
+       var data = google.visualization.arrayToDataTable([
+         ['Provinces', 'Frequency'],
+         ['Seoul',	14792],
+         ['Busan',	3596],
+         ['Daegu',	5058],
+         ['Gwangju',	1393],
+         ['Daejeon',	1374],
+         ['Gyeonggi',	8704],
+         ['Gangwon',	902],
+         ['Jeonnam',	1397],
+         ['Gyeongbuk',	2263],
+         ['Gyeongnam',	2226],
+         ['Jeju',	674],
+         ['Incheon',	1724],
+         ['Ulsan',	871],
+         ['Chungbuk',	1475],
+         ['Chungnam',	1013],
+         ['Jeonbuk',	1742],
+         ['Sejong',	38]
+       ]);
+       var options = {
+           region: 'KR',
+           resolution: 'provinces',
+           zoomControl:true,
+           scaleControl:true,
+           keepAspectRatio: false,
+           colorAxis: {colors: ['#64f57c', '#f071d4', '#ff0000']},
+           backgroundColor: '#ffffff',
+           datalessRegionColor: '#ffffff',
+           defaultColor: '#f5f5f5',
+       };
+       var datatest = google.visualization.arrayToDataTable([
+         ['Provinces', 'Population'],
+         ['Seoul',	9751415],
+         ['Busan',	3425317],
+         ['Daegu',	2448666],
+         ['Gwangju',	1459486],
+         ['Daejeon',	1481701],
+         ['Gyeonggi',	13176011],
+         ['Gangwon',	1540714],
+         ['Jeonnam',	1868856],
+         ['Gyeongbuk',	2668836],
+         ['Gyeongnam',	3366286],
+         ['Jeju',	670209],
+         ['Incheon',	2956828],
+         ['Ulsan',	1150891],
+         ['Chungbuk',	1599368],
+         ['Chungnam',	2125349],
+         ['Jeonbuk',	1825381],
+         ['Sejong',	330398]
+       ]);
+       var optionstest = {
+           region: 'KR',
+           resolution: 'provinces',
+           zoomControl:true,
+           scaleControl:true,
+           keepAspectRatio: false,
+           colorAxis: {colors: ['#ffffff', '#800000', '#000000']},
+           backgroundColor: '#ffffff',
+           datalessRegionColor: '#ffffff',
+           defaultColor: '#f5f5f5',
+       };
+       var chart = new google.visualization.GeoChart(document.getElementById('regions_div'), {zoom: 4});
+       chart.draw(data, options);
+     }
+    </script>
+    <style>
+        body {
+            height: 1400px;
+        }
+    </style>
+  </div><svg id="LenderBarSVG"></svg></div>
+
+  <div class="row1"><div id="DoNut" align="center" class="chartTitle">Population of Korea
+    <div id="regions_div_test" style="width: 300px; height: 170px;"></div>
+    <script type="text/javascript">
+     google.charts.load('current', {
+       'packages':['geochart'],
+       'mapsApiKey': 'AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY'
+     });
+     google.charts.setOnLoadCallback(drawRegionsMap);
+     function drawRegionsMap() {
+       var data_test = google.visualization.arrayToDataTable([
+         ['Provinces', 'Population'],
+         ['Seoul',	9751415],
+         ['Busan',	3425317],
+         ['Daegu',	2448666],
+         ['Gwangju',	1459486],
+         ['Daejeon',	1481701],
+         ['Gyeonggi',	13176011],
+         ['Gangwon',	1540714],
+         ['Jeonnam',	1868856],
+         ['Gyeongbuk',	2668836],
+         ['Gyeongnam',	3366286],
+         ['Jeju',	670209],
+         ['Incheon',	2956828],
+         ['Ulsan',	1150891],
+         ['Chungbuk',	1599368],
+         ['Chungnam',	2125349],
+         ['Jeonbuk',	1825381],
+         ['Sejong',	330398]
+       ]);
+       var options_test = {
+           region: 'KR',
+           resolution: 'provinces',
+           zoomControl:true,
+           scaleControl:true,
+           keepAspectRatio: false,
+           colorAxis: {colors: ['#ffffff', '#800000', '#000000']},
+           backgroundColor: '#ffffff',
+           datalessRegionColor: '#ffffff',
+           defaultColor: '#f5f5f5',
+       };
+       var chart_test = new google.visualization.GeoChart(document.getElementById('regions_div_test'), {zoom: 4});
+       chart_test.draw(data_test, options_test);
+     }
+    </script>
+    </div><svg class = "donutsvg" id="DoNutSVG"></svg></div>
+
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <hr />
+    Hypothesis :
+    <br />
+    <br />
+
+    1. As the number of cars registered annually increases, traffic accidents will gradually increase. (False)
+    <br />
+
+    2. The more populated the city, the more traffic accidents will occur. (Half)
+    <br />
+
+    3. Traffic accidents will occur most often while walking. (True)
+    <br />
+
+    <br />
+    <br />
+    Result :
+    <br />
+    <br />
+
+    1. Traffic accidents gradually decreased by year. Efforts are needed to maintain current trends.
+    <br />
+
+    2. In traffic accidents, Seoul ranked first, Gyeonggi second, and Daegu third. The population rankings were Gyeonggi first, Seoul second, and Busan third. The two showed similar trends but not in direct proportion.
+    <br />
+
+    3. Traffic accidents were the most common for the walking old man and bicycles were the second. Policies and discussions are needed to reduce the traffic accidents of pedestrian walking old man.
+    <br />
+
+</div>
+
+</div>
+
+    </body>
+
+</html>
